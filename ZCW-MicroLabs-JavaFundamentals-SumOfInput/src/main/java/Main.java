@@ -11,7 +11,7 @@ public class Main {
         Scanner scan = new Scanner(System.in);
         int sum = 0;
 
-        
+
         System.out.println(
                 "Please enter a number ");
         int num = scan.nextInt();
