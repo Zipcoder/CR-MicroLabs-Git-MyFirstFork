@@ -1,0 +1,49 @@
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % mkdir gitsitara
+sitara@zipcodes-MacBook-Pro-2 ~ % cd gitsitara
+sitara@zipcodes-MacBook-Pro-2 gitsitara % git clone https://github.com/sitarameez/CR-MicroLabs-Git-MyFirstFork.git
+Cloning into 'CR-MicroLabs-Git-MyFirstFork'...
+remote: Enumerating objects: 24, done.
+remote: Total 24 (delta 0), reused 0 (delta 0), pack-reused 24
+Unpacking objects: 100% (24/24), done.
+sitara@zipcodes-MacBook-Pro-2 gitsitara % ls
+CR-MicroLabs-Git-MyFirstFork
+sitara@zipcodes-MacBook-Pro-2 gitsitara % cd CR-MicroLabs-Git-MyFirstFork
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % ls
+README.md	my-name
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % mv my-name sitarameez
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % git add .
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % git commit -m "added your-name-here"
+[master d0685d1] added your-name-here
+ Committer: Sitara <sitara@zipcodes-MacBook-Pro-2.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ rename my-name => sitarameez (100%)
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % git push
+Username for 'https://github.com': sitarameez
+Password for 'https://sitarameez@github.com': 
+Enumerating objects: 3, done.
+Counting objects: 100% (3/3), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (2/2), 284 bytes | 284.00 KiB/s, done.
+Total 2 (delta 0), reused 0 (delta 0)
+To https://github.com/sitarameez/CR-MicroLabs-Git-MyFirstFork.git
+   dd6cea4..d0685d1  master -> master
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % git push
+Everything up-to-date
+sitara@zipcodes-MacBook-Pro-2 CR-MicroLabs-Git-MyFirstFork % ls

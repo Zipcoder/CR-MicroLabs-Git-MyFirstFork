@@ -1,0 +1,1372 @@
+Last login: Tue Jun 22 21:58:46 on ttys000
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % mkdir ~/Dev
+mkdir: /Users/sitara/Dev: File exists
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % cd dev
+sitara@zipcodes-MacBook-Pro-2 dev % pwd
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % myFile.txt
+zsh: command not found: myFile.txt
+sitara@zipcodes-MacBook-Pro-2 dev % ls
+dir3		myFile3.txt	myfile26	myfile5
+myFile.txt	myfile1		myfile3		myfile6
+myFile2.txt	myfile2		myfile4		newFile.txt
+sitara@zipcodes-MacBook-Pro-2 dev % cat myFile.txt myFile2.txt
+Hello Terminal
+Yello Terminal
+sitara@zipcodes-MacBook-Pro-2 dev % cat /etc/bashrc_Apple_Terminal
+# bash support for Terminal.
+
+
+# Working Directory
+#
+# Tell the terminal about the current working directory at each prompt.
+
+if [ -z "$INSIDE_EMACS" ]; then
+    update_terminal_cwd() {
+	# Identify the directory using a "file:" scheme URL, including
+	# the host name to disambiguate local vs. remote paths.
+	
+	# Percent-encode the pathname.
+	local url_path=''
+	{
+	    # Use LC_CTYPE=C to process text byte-by-byte. Ensure that
+	    # LC_ALL isn't set, so it doesn't interfere.
+	    local i ch hexch LC_CTYPE=C LC_ALL=
+	    for ((i = 0; i < ${#PWD}; ++i)); do
+		ch="${PWD:i:1}"
+		if [[ "$ch" =~ [/._~A-Za-z0-9-] ]]; then
+		    url_path+="$ch"
+		else
+		    printf -v hexch "%02X" "'$ch"
+		    # printf treats values greater than 127 as
+		    # negative and pads with "FF", so truncate.
+		    url_path+="%${hexch: -2:2}"
+		fi
+	    done
+	}
+	
+	printf '\e]7;%s\a' "file://$HOSTNAME$url_path"
+    }
+    PROMPT_COMMAND="update_terminal_cwd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+fi
+
+
+# Resume Support: Save/Restore Shell State
+#
+# Terminal assigns each terminal session a unique identifier and
+# communicates it via the TERM_SESSION_ID environment variable so that
+# programs running in a terminal can save/restore application-specific
+# state when quitting and restarting Terminal with Resume enabled.
+#
+# The following code defines a shell save/restore mechanism. Users can
+# add custom state by defining a shell_session_save_user_state function
+# that writes restoration commands to the session file at exit. e.g.,
+# to save a variable:
+#
+#   shell_session_save_user_state() { echo MY_VAR="'$MY_VAR'" >> "$SHELL_SESSION_FILE"; }
+#
+# During shell startup the session file is executed. Old files are
+# periodically deleted.
+#
+# The default behavior arranges to save and restore the bash command
+# history independently for each restored terminal session. It also
+# merges commands into the global history for new sessions. Because
+# of this it is recommended that you set HISTSIZE and HISTFILESIZE to
+# larger values.
+#
+# You may disable this behavior and share a single history by setting
+# SHELL_SESSION_HISTORY to 0. There are some common user customizations
+# that arrange to share new commands among running shells by
+# manipulating the history at each prompt, and they typically include
+# 'shopt -s histappend'; therefore, if the histappend shell option is
+# enabled, per-session history is disabled by default. You may
+# explicitly enable it by setting SHELL_SESSION_HISTORY to 1.
+#
+# The implementation of per-session command histories in combination
+# with a shared global command history is incompatible with the
+# HISTTIMEFORMAT variable--the timestamps are applied inconsistently
+# to different parts of the history; therefore, if HISTTIMEFORMAT is
+# defined, per-session history is disabled by default.
+#
+# Note that this uses PROMPT_COMMAND to enable per-session history
+# the first time for each new session. If you customize PROMPT_COMMAND
+# be sure to include the previous value. e.g.,
+#
+#   PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }your_code_here"
+#
+# Otherwise, the per-session history won't take effect until the first
+# restore.
+#
+# The save/restore mechanism is disabled if the following file exists:
+#
+#   ~/.bash_sessions_disable
+
+if [ ${SHELL_SESSION_DID_INIT:-0} -eq 0 ] && [ -n "$TERM_SESSION_ID" ] && [ ! -e "$HOME/.bash_sessions_disable" ]; then
+    
+    # Do not perform this setup more than once (which shouldn't occur
+    # unless the user's ~/.bash_profile executes /etc/profile, which
+    # is normally redundant).
+    SHELL_SESSION_DID_INIT=1
+    
+    # Set up the session directory/file.
+    SHELL_SESSION_DIR="$HOME/.bash_sessions"
+    SHELL_SESSION_FILE="$SHELL_SESSION_DIR/$TERM_SESSION_ID.session"
+    mkdir -m 700 -p "$SHELL_SESSION_DIR"
+    
+    #
+    # Restore previous session state.
+    #
+    
+    if [ -r "$SHELL_SESSION_FILE" ]; then
+	. "$SHELL_SESSION_FILE"
+	rm "$SHELL_SESSION_FILE"
+    fi
+    
+    #
+    # Note: Use absolute paths to invoke commands in the exit code and
+    # anything else that runs after user startup files, because the
+    # search path may have been modified.
+    #
+    
+    #
+    # Arrange for per-session shell command history.
+    #
+    
+    shell_session_history_allowed() {
+	# Return whether per-session history should be enabled.
+	if [ -n "$HISTFILE" ]; then
+	    # If this defaults to off, leave it unset so that we can
+	    # check again later. If it defaults to on, make it stick.
+	    local allowed=0
+	    if shopt -q histappend || [ -n "$HISTTIMEFORMAT" ]; then
+		allowed=${SHELL_SESSION_HISTORY:-0}
+	    else
+		allowed=${SHELL_SESSION_HISTORY:=1}
+	    fi
+	    if [ $allowed -eq 1 ]; then
+		return 0
+	    fi
+	fi
+	return 1
+    }
+    
+    if [ ${SHELL_SESSION_HISTORY:-1} -eq 1 ]; then
+	SHELL_SESSION_HISTFILE="$SHELL_SESSION_DIR/$TERM_SESSION_ID.history"
+	SHELL_SESSION_HISTFILE_NEW="$SHELL_SESSION_DIR/$TERM_SESSION_ID.historynew"
+	SHELL_SESSION_HISTFILE_SHARED="$HISTFILE"
+	
+	shell_session_history_enable() {
+	    (umask 077; /usr/bin/touch "$SHELL_SESSION_HISTFILE_NEW")
+	    HISTFILE="$SHELL_SESSION_HISTFILE_NEW"
+	    SHELL_SESSION_HISTORY=1
+	}
+	
+	# If the session history already exists and isn't empty, start
+	# using it now; otherwise, we'll use the shared history until
+	# we've determined whether users have enabled/disabled this.
+	if [ -s "$SHELL_SESSION_HISTFILE" ]; then
+	    history -r "$SHELL_SESSION_HISTFILE"
+	    shell_session_history_enable
+	else
+	    # At the first prompt, check whether per-session history should
+	    # be enabled. Delaying until after user scripts have run allows
+	    # users to opt in or out. If this doesn't get executed (because
+	    # the user has replaced PROMPT_COMMAND instead of concatenating
+	    # it), we'll check at shell exit; that works, but doesn't start
+	    # the per-session history until the first restore.
+	    
+	    shell_session_history_check() {
+		if [ ${SHELL_SESSION_DID_HISTORY_CHECK:-0} -eq 0 ]; then
+		    SHELL_SESSION_DID_HISTORY_CHECK=1
+		    if shell_session_history_allowed; then
+			shell_session_history_enable
+		    fi
+		    # Remove this check if we can; otherwise, we rely on the
+		    # variable above to prevent checking more than once.
+		    if [ "$PROMPT_COMMAND" = "shell_session_history_check" ]; then
+			unset PROMPT_COMMAND
+		    elif [[ $PROMPT_COMMAND =~ (.*)(; *shell_session_history_check *| *shell_session_history_check *; *)(.*) ]]; then
+			PROMPT_COMMAND="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"
+		    fi
+		fi
+	    }
+	    PROMPT_COMMAND="shell_session_history_check${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+	fi
+	
+	shell_session_save_history() {
+	    # Save new history to an intermediate file so we can copy it.
+	    shell_session_history_enable
+	    history -a
+	    # If the session history doesn't exist yet, copy the shared history.
+	    if [ -f "$SHELL_SESSION_HISTFILE_SHARED" ] && [ ! -s "$SHELL_SESSION_HISTFILE" ]; then
+		echo -ne '\n...copying shared history...'
+		(umask 077; /bin/cp "$SHELL_SESSION_HISTFILE_SHARED" "$SHELL_SESSION_HISTFILE")
+	    fi
+	    # Save new history to the per-session and shared files.
+	    echo -ne '\n...saving history...'
+	    (umask 077; /bin/cat "$SHELL_SESSION_HISTFILE_NEW" >> "$SHELL_SESSION_HISTFILE_SHARED")
+	    (umask 077; /bin/cat "$SHELL_SESSION_HISTFILE_NEW" >> "$SHELL_SESSION_HISTFILE")
+	    : >| "$SHELL_SESSION_HISTFILE_NEW"
+	    # If there is a history file size limit, apply it to the files.
+	    if [ -n "$HISTFILESIZE" ]; then
+		echo -n 'truncating history files...'
+		HISTFILE="$SHELL_SESSION_HISTFILE_SHARED"
+		HISTFILESIZE="$HISTFILESIZE"
+		HISTFILE="$SHELL_SESSION_HISTFILE"
+		HISTFILESIZE="$size"
+		HISTFILE="$SHELL_SESSION_HISTFILE_NEW"
+	    fi
+	    echo -ne '\n...'
+	}
+    fi
+    
+    #
+    # Arrange to save session state when exiting the shell.
+    #
+    
+    shell_session_save() {
+	# Save the current state.
+	if [ -n "$SHELL_SESSION_FILE" ]; then
+	    echo -n 'Saving session...'
+	    (umask 077; echo 'echo Restored session: "$(/bin/date -r '$(/bin/date +%s)')"' >| "$SHELL_SESSION_FILE")
+	    declare -F shell_session_save_user_state >/dev/null && shell_session_save_user_state
+	    shell_session_history_allowed && shell_session_save_history
+	    echo 'completed.'
+	fi
+    }
+    
+    # Delete old session files. (Not more than once a day.)
+    SHELL_SESSION_TIMESTAMP_FILE="$SHELL_SESSION_DIR/_expiration_check_timestamp"
+    shell_session_delete_expired() {
+	if ([ ! -e "$SHELL_SESSION_TIMESTAMP_FILE" ] || [ -z "$(/usr/bin/find "$SHELL_SESSION_TIMESTAMP_FILE" -mtime -1d)" ]); then
+	    local expiration_lock_file="$SHELL_SESSION_DIR/_expiration_lockfile"
+	    if /usr/bin/shlock -f "$expiration_lock_file" -p $$; then
+		echo -n 'Deleting expired sessions...'
+		local delete_count=$(/usr/bin/find "$SHELL_SESSION_DIR" -type f -mtime +2w -print -delete | /usr/bin/wc -l)
+		[ "$delete_count" -gt 0 ] && echo $delete_count' completed.' || echo 'none found.'
+		(umask 077; /usr/bin/touch "$SHELL_SESSION_TIMESTAMP_FILE")
+		/bin/rm "$expiration_lock_file"
+	    fi
+	fi
+    }
+    
+    # Update saved session state when exiting.
+    shell_session_update() {
+	shell_session_save && shell_session_delete_expired
+    }
+    trap shell_session_update EXIT
+fi
+sitara@zipcodes-MacBook-Pro-2 dev % less /etc/bashrc_Apple_Terminal
+sitara@zipcodes-MacBook-Pro-2 dev % grep Hello myFile.txt
+Hello Terminal
+sitara@zipcodes-MacBook-Pro-2 dev % touch myfile2 myfile3
+sitara@zipcodes-MacBook-Pro-2 dev % ls -lT
+total 112
+drwxr-xr-x  2 sitara  staff     64 Jun 22 21:00:48 2021 dir3
+-rw-r--r--  1 sitara  staff     15 Jun 22 11:48:33 2021 myFile.txt
+-rw-r--r--  1 sitara  staff     15 Jun 21 23:02:20 2021 myFile2.txt
+-rw-r--r--  1 sitara  staff     15 Jun 22 11:49:50 2021 myFile3.txt
+-rw-r--r--  1 sitara  staff      0 Jun 22 11:54:03 2021 myfile1
+-rw-r--r--  1 sitara  staff      0 Jun 22 22:07:15 2021 myfile2
+-rw-r--r--  1 sitara  staff  33257 Jun 22 11:59:03 2021 myfile26
+-rw-r--r--  1 sitara  staff      0 Jun 22 22:07:15 2021 myfile3
+-rw-r--r--  1 sitara  staff      0 Jun 22 11:54:22 2021 myfile4
+-rw-r--r--  1 sitara  staff      0 Jun 21 23:08:56 2021 myfile5
+-rw-r--r--  1 sitara  staff     22 Jun 21 23:18:13 2021 myfile6
+-rw-r--r--  1 sitara  staff     15 Jun 22 21:05:32 2021 newFile.txt
+sitara@zipcodes-MacBook-Pro-2 dev % man cp        
+sitara@zipcodes-MacBook-Pro-2 dev % cp -c myFile.txt
+usage: cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file target_file
+       cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file ... target_directory
+sitara@zipcodes-MacBook-Pro-2 dev % cp -C myFile.txt
+cp: illegal option -- C
+usage: cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file target_file
+       cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file ... target_directory
+sitara@zipcodes-MacBook-Pro-2 dev % cp -R myFile.txt
+usage: cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file target_file
+       cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file ... target_directory
+sitara@zipcodes-MacBook-Pro-2 dev % cp -R
+usage: cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file target_file
+       cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file ... target_directory
+sitara@zipcodes-MacBook-Pro-2 dev % cp -r myFile.txt /dir3
+cp: /dir3: Read-only file system
+sitara@zipcodes-MacBook-Pro-2 dev % pwd  
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % cat dir3
+cat: dir3: Is a directory
+sitara@zipcodes-MacBook-Pro-2 dev % cd dir3         
+sitara@zipcodes-MacBook-Pro-2 dir3 % pwd
+/Users/sitara/dev/dir3
+sitara@zipcodes-MacBook-Pro-2 dir3 % cp -r myFile.txt /Users/sitara/dev/dir3
+cp: myFile.txt: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % cp -R myFile.txt /Users/sitara/dev/dir3
+cp: myFile.txt: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % cd dev
+cd: no such file or directory: dev
+sitara@zipcodes-MacBook-Pro-2 dir3 % cd Dev
+cd: no such file or directory: Dev
+sitara@zipcodes-MacBook-Pro-2 dir3 % cp -R dir3 newdir
+cp: dir3: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % pwd
+/Users/sitara/dev/dir3
+sitara@zipcodes-MacBook-Pro-2 dir3 % cp -R 
+usage: cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file target_file
+       cp [-R [-H | -L | -P]] [-fi | -n] [-apvXc] source_file ... target_directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % mkdir ~/newdir1
+sitara@zipcodes-MacBook-Pro-2 dir3 % pwd      
+/Users/sitara/dev/dir3
+sitara@zipcodes-MacBook-Pro-2 dir3 % mv cd newdir1                
+mv: rename cd to newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % cd ..
+sitara@zipcodes-MacBook-Pro-2 dev % ls
+dir3		myFile3.txt	myfile26	myfile5
+myFile.txt	myfile1		myfile3		myfile6
+myFile2.txt	myfile2		myfile4		newFile.txt
+sitara@zipcodes-MacBook-Pro-2 dev % cd dir3
+sitara@zipcodes-MacBook-Pro-2 dir3 % rmdir newdir1
+rmdir: newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir3 % cd..
+zsh: command not found: cd..
+sitara@zipcodes-MacBook-Pro-2 dir3 % cd ..
+sitara@zipcodes-MacBook-Pro-2 dev % ls
+dir3		myFile3.txt	myfile26	myfile5
+myFile.txt	myfile1		myfile3		myfile6
+myFile2.txt	myfile2		myfile4		newFile.txt
+sitara@zipcodes-MacBook-Pro-2 dev % mkdir ~newdir1
+zsh: no such user or named directory: newdir1
+sitara@zipcodes-MacBook-Pro-2 dev % cd newdir1
+cd: no such file or directory: newdir1
+sitara@zipcodes-MacBook-Pro-2 dev % pwd
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % mv /Users/sitara/dev/dir3 Users/sitara/dev
+mv: rename /Users/sitara/dev/dir3 to Users/sitara/dev: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dev % mv /Users/sitara/dev/dir3 /Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 dev % ls
+myFile.txt	myfile1		myfile3		myfile6
+myFile2.txt	myfile2		myfile4		newFile.txt
+myFile3.txt	myfile26	myfile5		newdir1
+sitara@zipcodes-MacBook-Pro-2 dev % cd newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % ls
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 dev % cat newdir1
+cat: newdir1: Is a directory
+sitara@zipcodes-MacBook-Pro-2 dev % cd dir3
+cd: no such file or directory: dir3
+sitara@zipcodes-MacBook-Pro-2 dev % pwd
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % rmdir dir3
+rmdir: dir3: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dev % mkdir ~/dir3
+sitara@zipcodes-MacBook-Pro-2 dev % cd newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd dir3
+cd: no such file or directory: dir3
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd myFile.txt
+cd: no such file or directory: myFile.txt
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 dev % pwd
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % cd dir3
+cd: no such file or directory: dir3
+sitara@zipcodes-MacBook-Pro-2 dev % mkdir ~/dir4
+sitara@zipcodes-MacBook-Pro-2 dev % cd dir4
+cd: no such file or directory: dir4
+sitara@zipcodes-MacBook-Pro-2 dev % mkdir~/Dir4
+zsh: no such file or directory: mkdir~/Dir4
+sitara@zipcodes-MacBook-Pro-2 dev % mkdir ~/Dir4
+mkdir: /Users/sitara/Dir4: File exists
+sitara@zipcodes-MacBook-Pro-2 dev % cd Dir4
+cd: no such file or directory: Dir4
+sitara@zipcodes-MacBook-Pro-2 dev % pwd
+/Users/sitara/dev
+sitara@zipcodes-MacBook-Pro-2 dev % cd newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd Dir4
+cd: no such file or directory: Dir4
+sitara@zipcodes-MacBook-Pro-2 newdir1 % mkdir ~dir26
+zsh: no such user or named directory: dir26
+sitara@zipcodes-MacBook-Pro-2 newdir1 % mkdir ~/dir26
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd dir26
+cd: no such file or directory: dir26
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd dir26
+cd: no such file or directory: dir26
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd myFile.txt
+cd: no such file or directory: myFile.txt
+sitara@zipcodes-MacBook-Pro-2 newdir1 % mv dir26 /Users/sitara/dev/newdir1
+mv: rename dir26 to /Users/sitara/dev/newdir1/dir26: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd
+sitara@zipcodes-MacBook-Pro-2 ~ % cd dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % pwd
+/Users/sitara/dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv Users/sitara/dir2 Users/sitara/dev/newdir1 
+mv: rename Users/sitara/dir2 to Users/sitara/dev/newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv Users/sitara/dir2 Users/sitara/dev     
+mv: rename Users/sitara/dir2 to Users/sitara/dev: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd Users/sitara/dev/newdir1         
+cd: no such file or directory: Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd Users/sitara            
+cd: no such file or directory: Users/sitara
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd Users       
+cd: no such file or directory: Users
+sitara@zipcodes-MacBook-Pro-2 dir2 % pwd     
+/Users/sitara/dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd..
+zsh: command not found: cd..
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd dev
+cd: no such file or directory: dev
+sitara@zipcodes-MacBook-Pro-2 dir2 % ls
+sitara@zipcodes-MacBook-Pro-2 dir2 % pwd
+/Users/sitara/dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % mv Users/sitara/dir2 Users/sitara/dev/newdir1
+mv: rename Users/sitara/dir2 to Users/sitara/dev/newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 ~ % cd Users/sitara/dev/newdir1
+cd: no such file or directory: Users/sitara/dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 ~ % cd newdir1                 
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % ls
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd newdir1
+cd: no such file or directory: newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % ls
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd Dev 
+cd: no such file or directory: Dev
+sitara@zipcodes-MacBook-Pro-2 newdir1 % ls
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd dev
+cd: no such file or directory: dev
+sitara@zipcodes-MacBook-Pro-2 newdir1 % pwd
+/Users/sitara/newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % cd ..
+sitara@zipcodes-MacBook-Pro-2 /Users % pwd
+/Users
+sitara@zipcodes-MacBook-Pro-2 /Users % cd dev
+cd: no such file or directory: dev
+sitara@zipcodes-MacBook-Pro-2 /Users % cd dev
+cd: no such file or directory: dev
+sitara@zipcodes-MacBook-Pro-2 /Users % pwd
+/Users
+sitara@zipcodes-MacBook-Pro-2 /Users % cd ..
+sitara@zipcodes-MacBook-Pro-2 / % cd dev
+sitara@zipcodes-MacBook-Pro-2 /dev % pwd
+/dev
+sitara@zipcodes-MacBook-Pro-2 /dev % cd dir1
+cd: no such file or directory: dir1
+sitara@zipcodes-MacBook-Pro-2 /dev % pwd
+/dev
+sitara@zipcodes-MacBook-Pro-2 /dev % cd ~
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % ls -d -- */
+DayOneDemo/	Downloads/	Pictures/	dir26/		newdir1/
+Desktop/	Library/	Public/		dir3/		sitara/
+Dev/		Movies/		dir1/		dir4/
+Documents/	Music/		dir2/		newdir/
+sitara@zipcodes-MacBook-Pro-2 ~ % find . -mindepth 1 -maxdepth 1 -type d
+./.config
+./sitara
+./Music
+./newdir1
+./dir2
+./.local
+./Pictures
+./dir4
+./dir3
+./Desktop
+./Library
+./newdir
+./DayOneDemo
+./Public
+./dir26
+./Movies
+./.Trash
+./Dev
+./Documents
+./dir1
+./.vscode
+./Downloads
+sitara@zipcodes-MacBook-Pro-2 ~ % cd sitara
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dir1
+mkdir: dir1: File exists
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dir2
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dir2/newdir2
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dir3
+sitara@zipcodes-MacBook-Pro-2 sitara % mv Users/sitara/dir2 Users/sitara/dev/newdir1
+mv: rename Users/sitara/dir2 to Users/sitara/dev/newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dev/newdir1
+mkdir: dev: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dev
+sitara@zipcodes-MacBook-Pro-2 sitara % mkdir dev/newdir1
+sitara@zipcodes-MacBook-Pro-2 sitara % mv Users/sitara/dir2 Users/sitara/dev/newdir1
+mv: rename Users/sitara/dir2 to Users/sitara/dev/newdir1: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 sitara % mv dir2 dev/newdir1 
+sitara@zipcodes-MacBook-Pro-2 sitara % ls
+dev	dir1	dir3
+sitara@zipcodes-MacBook-Pro-2 sitara % cd dev
+sitara@zipcodes-MacBook-Pro-2 dev % cd newdir1
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % pwd
+/Users/sitara/sitara/dev/newdir1/dir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % ls
+newdir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv .myFile
+usage: mv [-f | -i | -n] [-v] source target
+       mv [-f | -i | -n] [-v] source ... directory
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv .dir2  
+usage: mv [-f | -i | -n] [-v] source target
+       mv [-f | -i | -n] [-v] source ... directory
+sitara@zipcodes-MacBook-Pro-2 dir2 % echo "Hello Terminal" >myFile.txt
+sitara@zipcodes-MacBook-Pro-2 dir2 % cat myFile.txt
+Hello Terminal
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv .myFile
+usage: mv [-f | -i | -n] [-v] source target
+       mv [-f | -i | -n] [-v] source ... directory
+sitara@zipcodes-MacBook-Pro-2 dir2 % mv myFile.txt .myFile
+sitara@zipcodes-MacBook-Pro-2 dir2 % ls
+newdir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % ls -al
+total 8
+drwxr-xr-x  4 sitara  staff  128 Jun 22 23:44 .
+drwxr-xr-x  3 sitara  staff   96 Jun 22 23:37 ..
+-rw-r--r--  1 sitara  staff   15 Jun 22 23:42 .myFile
+drwxr-xr-x  2 sitara  staff   64 Jun 22 23:34 newdir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % ls -al
+total 8
+drwxr-xr-x  4 sitara  staff  128 Jun 22 23:44 .
+drwxr-xr-x  3 sitara  staff   96 Jun 22 23:37 ..
+-rw-r--r--  1 sitara  staff   15 Jun 22 23:42 .myFile
+drwxr-xr-x  2 sitara  staff   64 Jun 22 23:34 newdir2
+sitara@zipcodes-MacBook-Pro-2 dir2 % cd ..
+sitara@zipcodes-MacBook-Pro-2 newdir1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 dev % cd ..
+sitara@zipcodes-MacBook-Pro-2 sitara % cd..
+zsh: command not found: cd..
+sitara@zipcodes-MacBook-Pro-2 sitara % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % pwd  
+/Users/sitara
+sitara@zipcodes-MacBook-Pro-2 ~ % mkdir destroy1
+sitara@zipcodes-MacBook-Pro-2 ~ % mkdir destroy2
+sitara@zipcodes-MacBook-Pro-2 ~ % cat >filedestroy.txt
+text
+/  
+sitara@zipcodes-MacBook-Pro-2 ~ % echo "texting" >filedestroy1.txt
+sitara@zipcodes-MacBook-Pro-2 ~ % cd destroy1
+sitara@zipcodes-MacBook-Pro-2 destroy1 % echo "textiiing" >filedestroy2.txt
+sitara@zipcodes-MacBook-Pro-2 destroy1 % rm filedestroy.txt
+rm: filedestroy.txt: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 destroy1 % cd..               
+zsh: command not found: cd..
+sitara@zipcodes-MacBook-Pro-2 destroy1 % cd..
+zsh: command not found: cd..
+sitara@zipcodes-MacBook-Pro-2 destroy1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % rm filedestroy.txt
+sitara@zipcodes-MacBook-Pro-2 ~ % unlink filedestroy1.txt
+sitara@zipcodes-MacBook-Pro-2 ~ % rm -i
+usage: rm [-f | -i] [-dPRrvW] file ...
+       unlink file
+sitara@zipcodes-MacBook-Pro-2 ~ % rm filedestroy1.txt
+rm: filedestroy1.txt: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 ~ % rm filedestroy2.txt
+rm: filedestroy2.txt: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 ~ % rmdir destroy1
+rmdir: destroy1: Directory not empty
+sitara@zipcodes-MacBook-Pro-2 ~ % rmdir destroy
+rmdir: destroy: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 ~ % rm -r
+usage: rm [-f | -i] [-dPRrvW] file ...
+       unlink file
+sitara@zipcodes-MacBook-Pro-2 ~ % echo "Hello" >-toughFile
+sitara@zipcodes-MacBook-Pro-2 ~ % rm toughFile
+rm: toughFile: No such file or directory
+sitara@zipcodes-MacBook-Pro-2 ~ % cd destroy1
+sitara@zipcodes-MacBook-Pro-2 destroy1 % cd ..
+sitara@zipcodes-MacBook-Pro-2 ~ % rm -R destroy1
+sitara@zipcodes-MacBook-Pro-2 ~ % find / -name core
+find: /usr/sbin/authserver: Permission denied
+find: /usr/local/mysql-8.0.22-macos10.15-x86_64/keyring: Permission denied
+find: /usr/local/mysql-8.0.22-macos10.15-x86_64/data: Permission denied
+find: /usr/local/mysql-8.0.23-macos10.15-x86_64/keyring: Permission denied
+find: /usr/local/mysql-8.0.23-macos10.15-x86_64/data: Permission denied
+/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+find: /Library/Application Support/Apple/ParentalControls/Users: Permission denied
+find: /Library/Application Support/Apple/AssetCache/Data: Permission denied
+find: /Library/Application Support/ApplePushService: Permission denied
+find: /Library/Application Support/org.pqrs/tmp/rootonly: Permission denied
+find: /Library/Application Support/org.pqrs/tmp/karabiner_console_user_server/0: Permission denied
+find: /Library/Application Support/com.apple.TCC: Operation not permitted
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+find: /Library/Caches/com.apple.iconservices.store: Permission denied
+find: /System/Library/DirectoryServices/DefaultLocalDB/Default: Permission denied
+find: /System/Library/Templates/Data/Library/Application Support/Apple/ParentalControls/Users: Permission denied
+find: /System/Library/Templates/Data/Library/Application Support/com.apple.TCC: Operation not permitted
+find: /System/Library/Templates/Data/private/etc/cups/certs: Permission denied
+find: /System/Library/Templates/Data/private/var/install: Permission denied
+find: /System/Library/Templates/Data/private/var/ma: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/mqueue: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/saved: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/trace: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/defer: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/flush: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/deferred: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/corrupt: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/public: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/private: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/incoming: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/active: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/maildrop: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/hold: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/postfix/bounce: Permission denied
+find: /System/Library/Templates/Data/private/var/spool/cups: Permission denied
+find: /System/Library/Templates/Data/private/var/jabberd: Permission denied
+find: /System/Library/Templates/Data/private/var/audit: Permission denied
+find: /System/Library/Templates/Data/private/var/root: Permission denied
+find: /System/Library/Templates/Data/private/var/lib/postfix: Permission denied
+find: /System/Library/Templates/Data/private/var/db/locationd: Permission denied
+find: /System/Library/Templates/Data/private/var/db/analyticsd: Permission denied
+find: /System/Library/Templates/Data/private/var/db/nsurlsessiond: Permission denied
+find: /System/Library/Templates/Data/private/var/db/fpsd: Permission denied
+find: /System/Library/Templates/Data/private/var/db/hidd: Permission denied
+find: /System/Library/Templates/Data/private/var/db/geod: Permission denied
+find: /System/Library/Templates/Data/private/var/db/reportmemoryexception: Permission denied
+find: /System/Library/Templates/Data/private/var/db/lockdown: Permission denied
+find: /System/Library/Templates/Data/private/var/db/diagnostics: Permission denied
+find: /System/Library/Templates/Data/private/var/db/datadetectors: Permission denied
+find: /System/Library/Templates/Data/private/var/db/cmiodalassistants: Permission denied
+find: /System/Library/Templates/Data/private/var/db/com.apple.xpc.roleaccountd.staging: Permission denied
+find: /System/Library/Templates/Data/private/var/db/dslocal/nodes/Default: Permission denied
+find: /System/Library/Templates/Data/private/var/db/nearbyd: Permission denied
+find: /System/Library/Templates/Data/private/var/db/timed: Permission denied
+find: /System/Library/Templates/Data/private/var/db/applepay: Permission denied
+find: /System/Library/Templates/Data/private/var/db/securityagent: Permission denied
+find: /System/Library/Templates/Data/private/var/db/ConfigurationProfiles/Store: Permission denied
+find: /System/Library/Templates/Data/private/var/db/caches/opendirectory: Permission denied
+find: /System/Library/Templates/Data/private/var/at/tabs: Permission denied
+find: /System/Library/Templates/Data/private/var/at/tmp: Permission denied
+find: /System/Library/Templates/Data/private/var/backups: Permission denied
+find: /System/Library/Templates/Data/private/var/agentx: Permission denied
+/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+find: /System/Library/Caches/com.apple.coresymbolicationd: Permission denied
+find: /System/Volumes/Data/usr/local/mysql-8.0.22-macos10.15-x86_64/keyring: Permission denied
+find: /System/Volumes/Data/usr/local/mysql-8.0.22-macos10.15-x86_64/data: Permission denied
+find: /System/Volumes/Data/usr/local/mysql-8.0.23-macos10.15-x86_64/keyring: Permission denied
+find: /System/Volumes/Data/usr/local/mysql-8.0.23-macos10.15-x86_64/data: Permission denied
+/System/Volumes/Data/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+find: /System/Volumes/Data/.Spotlight-V100: No such file or directory
+find: /System/Volumes/Data/Library/Application Support/Apple/ParentalControls/Users: Permission denied
+find: /System/Volumes/Data/Library/Application Support/Apple/AssetCache/Data: Permission denied
+find: /System/Volumes/Data/Library/Application Support/ApplePushService: Permission denied
+find: /System/Volumes/Data/Library/Application Support/org.pqrs/tmp/rootonly: Permission denied
+find: /System/Volumes/Data/Library/Application Support/org.pqrs/tmp/karabiner_console_user_server/0: Permission denied
+find: /System/Volumes/Data/Library/Application Support/com.apple.TCC: Operation not permitted
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+find: /System/Volumes/Data/Library/Caches/com.apple.iconservices.store: Permission denied
+find: /System/Volumes/Data/System/Library/DirectoryServices/DefaultLocalDB/Default: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/Library/Application Support/Apple/ParentalControls/Users: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/Library/Application Support/com.apple.TCC: Operation not permitted
+find: /System/Volumes/Data/System/Library/Templates/Data/private/etc/cups/certs: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/install: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/ma: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/mqueue: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/saved: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/trace: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/defer: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/flush: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/deferred: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/corrupt: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/public: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/private: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/incoming: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/active: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/maildrop: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/hold: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/postfix/bounce: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/spool/cups: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/jabberd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/audit: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/root: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/lib/postfix: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/locationd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/analyticsd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/nsurlsessiond: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/fpsd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/hidd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/geod: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/reportmemoryexception: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/lockdown: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/diagnostics: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/datadetectors: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/cmiodalassistants: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/com.apple.xpc.roleaccountd.staging: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/dslocal/nodes/Default: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/nearbyd: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/timed: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/applepay: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/securityagent: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/ConfigurationProfiles/Store: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/db/caches/opendirectory: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/at/tabs: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/at/tmp: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/backups: Permission denied
+find: /System/Volumes/Data/System/Library/Templates/Data/private/var/agentx: Permission denied
+/System/Volumes/Data/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+find: /System/Volumes/Data/System/Library/Caches/com.apple.coresymbolicationd: Permission denied
+find: /System/Volumes/Data/mnt: No such file or directory
+find: /System/Volumes/Data/.fseventsd: Permission denied
+find: /System/Volumes/Data/private/etc/cups/certs: Permission denied
+find: /System/Volumes/Data/private/var/networkd/Library: Permission denied
+find: /System/Volumes/Data/private/var/install: Permission denied
+find: /System/Volumes/Data/private/var/ma: Permission denied
+find: /System/Volumes/Data/private/var/spool/mqueue: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/saved: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/trace: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/defer: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/flush: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/deferred: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/corrupt: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/public: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/private: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/incoming: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/active: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/maildrop: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/hold: Permission denied
+find: /System/Volumes/Data/private/var/spool/postfix/bounce: Permission denied
+find: /System/Volumes/Data/private/var/spool/cups: Permission denied
+find: /System/Volumes/Data/private/var/jabberd: Permission denied
+find: /System/Volumes/Data/private/var/audit: Permission denied
+find: /System/Volumes/Data/private/var/root: Permission denied
+find: /System/Volumes/Data/private/var/lib/postfix: Permission denied
+find: /System/Volumes/Data/private/var/db/Spotlight: Permission denied
+find: /System/Volumes/Data/private/var/db/locationd: Permission denied
+find: /System/Volumes/Data/private/var/db/analyticsd: Permission denied
+find: /System/Volumes/Data/private/var/db/nsurlsessiond: Permission denied
+find: /System/Volumes/Data/private/var/db/softwareupdate/Library: Permission denied
+find: /System/Volumes/Data/private/var/db/fpsd: Permission denied
+find: /System/Volumes/Data/private/var/db/hidd: Permission denied
+find: /System/Volumes/Data/private/var/db/Spotlight-V100: Permission denied
+find: /System/Volumes/Data/private/var/db/geod: Permission denied
+find: /System/Volumes/Data/private/var/db/reportmemoryexception: Permission denied
+find: /System/Volumes/Data/private/var/db/Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/db/lockdown: Operation not permitted
+find: /System/Volumes/Data/private/var/db/datadetectors: Permission denied
+find: /System/Volumes/Data/private/var/db/cmiodalassistants: Permission denied
+find: /System/Volumes/Data/private/var/db/com.apple.xpc.roleaccountd.staging: Permission denied
+find: /System/Volumes/Data/private/var/db/dslocal/nodes/Default: Permission denied
+find: /System/Volumes/Data/private/var/db/sudo: Permission denied
+find: /System/Volumes/Data/private/var/db/nearbyd: Permission denied
+find: /System/Volumes/Data/private/var/db/dhcpclient: Permission denied
+find: /System/Volumes/Data/private/var/db/timed: Permission denied
+find: /System/Volumes/Data/private/var/db/applepay: Permission denied
+find: /System/Volumes/Data/private/var/db/securityagent: Permission denied
+find: /System/Volumes/Data/private/var/db/searchparty: Operation not permitted
+find: /System/Volumes/Data/private/var/db/CoreDuet/Knowledge: Operation not permitted
+find: /System/Volumes/Data/private/var/db/ConfigurationProfiles/Setup: Permission denied
+find: /System/Volumes/Data/private/var/db/ConfigurationProfiles/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/db/caches/opendirectory: Permission denied
+find: /System/Volumes/Data/private/var/at/tabs: Permission denied
+find: /System/Volumes/Data/private/var/at/tmp: Permission denied
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.notificationcenter: Permission denied
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.pluginkit: Permission denied
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.dock.launchpad: Permission denied
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.nsurlsessiond/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000b000002r/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000b000002r/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/0: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/C: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000b400002s/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000b400002s/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000c4000031/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000c4000031/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000003000000r/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000003000000r/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000s800006_/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000s800006_/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000084000021/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000084000021/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000011800008_/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000011800008_/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000010w000087/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000010w000087/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/0/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000108000082/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000108000082/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000114000089/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000114000089/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.Spotlight: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.notificationcenter: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.pluginkit: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000006w00001q/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000006w00001q/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000s0000068/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000s0000068/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000xc00007b/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000xc00007b/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000010h000084/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n000010h000084/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000bh00002w/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n00000bh00002w/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.revisiond/com.apple.revisiond.temp: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.Spotlight: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.pluginkit: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T: Permission denied
+find: /System/Volumes/Data/private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/C: Permission denied
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/dmd: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.nsurlsessiond/com.apple.nsurlsessiond: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.routined/dv: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.touristd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.photolibraryd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.BKAgentService/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Safari/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.mail/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Photos/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.nsurlsessiond/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Notes/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.passd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.studentd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.parsecd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.identityservicesd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.geod/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.cloudd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.routined/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.corerecents.recentsd/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/homed/TemporaryItems: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /System/Volumes/Data/private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /System/Volumes/Data/private/var/run/mds: Permission denied
+find: /System/Volumes/Data/private/var/run/.vfs_rsrc_streams_0x174317ca7eeee6730: Permission denied
+find: /System/Volumes/Data/private/var/backups: Permission denied
+find: /System/Volumes/Data/private/var/agentx: Permission denied
+find: /System/Volumes/Data/.DocumentRevisions-V100: No such file or directory
+find: /System/Volumes/Data/Users/zipcode/Music: Permission denied
+find: /System/Volumes/Data/Users/zipcode/.local/share/karabiner/log: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Pictures: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Desktop: Operation not permitted
+find: /System/Volumes/Data/Users/zipcode/Library: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Public/Drop Box: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Movies: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Documents: Permission denied
+find: /System/Volumes/Data/Users/zipcode/Downloads: Permission denied
+find: /System/Volumes/Data/Users/sitara/Desktop: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Application Support/CallHistoryTransactions: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Application Support/com.apple.sharedfilelist: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Application Support/com.apple.TCC: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Application Support/FileProvider: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Application Support/CallHistoryDB: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Autosave Information: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/IdentityServices: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Messages: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/HomeKit: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Sharing: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Mail: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Safari: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Suggestions: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Containers/com.apple.Safari: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Containers/com.apple.iChat: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Containers/com.apple.CloudDocs.MobileDocumentsFileProvider: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Containers/com.apple.mail: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/PersonalizationPortrait: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Metadata/CoreSpotlight: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Metadata/com.apple.IntelligentSuggestions: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Cookies: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Caches/CloudKit: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Caches/com.apple.Safari: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/Library/Caches/com.apple.ap.adprivacyd: Operation not permitted
+find: /System/Volumes/Data/Users/sitara/.Trash: Operation not permitted
+/System/Volumes/Data/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/numpy/core
+/System/Volumes/Data/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/django/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core/node_modules/got/dist/source/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@snyk/dep-graph/dist/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/got/dist/source/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+STDERR>/System/Volumes/Data/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+/System/Volumes/Data/Applications/Postman.app/Contents/Resources/app/node_modules/@sentry/core
+find: /System/Volumes/Data/.TemporaryItems: No such file or directory
+find: /System/DriverKit: No such file or directory
+find: /.fseventsd: Permission denied
+find: /private/etc/cups/certs: Permission denied
+find: /private/var/networkd/Library: Permission denied
+find: /private/var/install: Permission denied
+find: /private/var/ma: Permission denied
+find: /private/var/spool/mqueue: Permission denied
+find: /private/var/spool/postfix/saved: Permission denied
+find: /private/var/spool/postfix/trace: Permission denied
+find: /private/var/spool/postfix/defer: Permission denied
+find: /private/var/spool/postfix/flush: Permission denied
+find: /private/var/spool/postfix/deferred: Permission denied
+find: /private/var/spool/postfix/corrupt: Permission denied
+find: /private/var/spool/postfix/public: Permission denied
+find: /private/var/spool/postfix/private: Permission denied
+find: /private/var/spool/postfix/incoming: Permission denied
+find: /private/var/spool/postfix/active: Permission denied
+find: /private/var/spool/postfix/maildrop: Permission denied
+find: /private/var/spool/postfix/hold: Permission denied
+find: /private/var/spool/postfix/bounce: Permission denied
+find: /private/var/spool/cups: Permission denied
+find: /private/var/jabberd: Permission denied
+find: /private/var/audit: Permission denied
+find: /private/var/root: Permission denied
+find: /private/var/lib/postfix: Permission denied
+find: /private/var/db/Spotlight: Permission denied
+find: /private/var/db/locationd: Permission denied
+find: /private/var/db/analyticsd: Permission denied
+find: /private/var/db/nsurlsessiond: Permission denied
+find: /private/var/db/softwareupdate/Library: Permission denied
+find: /private/var/db/fpsd: Permission denied
+find: /private/var/db/hidd: Permission denied
+find: /private/var/db/Spotlight-V100: Permission denied
+find: /private/var/db/geod: Permission denied
+find: /private/var/db/reportmemoryexception: Permission denied
+find: /private/var/db/Sandbox: Operation not permitted
+find: /private/var/db/lockdown: Operation not permitted
+find: /private/var/db/datadetectors: Permission denied
+find: /private/var/db/cmiodalassistants: Permission denied
+find: /private/var/db/com.apple.xpc.roleaccountd.staging: Permission denied
+find: /private/var/db/dslocal/nodes/Default: Permission denied
+find: /private/var/db/sudo: Permission denied
+find: /private/var/db/nearbyd: Permission denied
+find: /private/var/db/dhcpclient: Permission denied
+find: /private/var/db/timed: Permission denied
+find: /private/var/db/applepay: Permission denied
+find: /private/var/db/securityagent: Permission denied
+find: /private/var/db/searchparty: Operation not permitted
+find: /private/var/db/CoreDuet/Knowledge: Operation not permitted
+find: /private/var/db/ConfigurationProfiles/Setup: Permission denied
+find: /private/var/db/ConfigurationProfiles/Store: Operation not permitted
+find: /private/var/db/caches/opendirectory: Permission denied
+find: /private/var/at/tabs: Permission denied
+find: /private/var/at/tmp: Permission denied
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/dmd: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/0/com.apple.routined/dv: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /private/var/folders/87/lf4dp7s93f994yg6767607p40000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/dmd: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.notificationcenter: Permission denied
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.routined/dv: Operation not permitted
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.pluginkit: Permission denied
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/0/com.apple.dock.launchpad: Permission denied
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/T: Permission denied
+find: /private/var/folders/vp/k2syxkts0_11x1w976h1nkcw0000gn/C: Permission denied
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/dmd: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.nsurlsessiond/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/0/com.apple.routined/dv: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /private/var/folders/zf/h60vkhps0z1btrxd949pjkc40000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+STDefind: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000b000002r/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000b000002r/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/0: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000sm00006d/C: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000b400002s/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000b400002s/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000c4000031/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000c4000031/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000003000000r/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000003000000r/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000s800006_/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000s800006_/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000084000021/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000084000021/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000011800008_/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000011800008_/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000010w000087/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000010w000087/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/0/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000y800007k/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000108000082/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000108000082/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000114000089/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000114000089/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.Spotlight: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/dmd: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.notificationcenter: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.routined/dv: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/0/com.apple.pluginkit: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000z000007r/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000006w00001q/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000006w00001q/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000s0000068/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000s0000068/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000xc00007b/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000xc00007b/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000010h000084/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n000010h000084/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000bh00002w/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n00000bh00002w/C: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.revisiond/com.apple.revisiond.temp: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.Spotlight: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/0/com.apple.pluginkit: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T: Permission denied
+find: /private/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/C: Permission denied
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/dmd: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/0/com.apple.routined/dv: Operation not permitted
+rfind: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /private/var/folders/gv/92sg3mkn5v14d8mbvctr8f940000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.ScreenTimeAgent/Store: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.lockoutagent: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.progressd/ClassKit: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.Safari/SafariFamily: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.LaunchServices.dv: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/dmd: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.nsurlsessiond/com.apple.nsurlsessiond: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.SharedWebCredentials: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/0/com.apple.routined/dv: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.touristd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.photolibraryd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.BKAgentService/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Safari/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.mail/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Photos/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.nsurlsessiond/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.Notes/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.passd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.studentd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.parsecd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.identityservicesd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.geod/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.cloudd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.routined/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/com.apple.corerecents.recentsd/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/T/homed/TemporaryItems: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.WebKit.WebContent.Sandbox: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.QuickLook.thumbnailcache: Operation not permitted
+find: /private/var/folders/xx/ff560pcd2zzdtx9vck3yf5sr0000gp/C/com.apple.WebKit.Networking.Sandbox: Operation not permitted
+find: /private/var/run/mds: Permission denied
+find: /private/var/run/.vfs_rsrc_streams_0x174317ca7eeee6730: Permission denied
+find: /private/var/backups: Permission denied
+find: /private/var/agentx: Permission denied
+find: /Users/zipcode/Music: Permission denied
+find: /Users/zipcode/.local/share/karabiner/log: Permission denied
+find: /Users/zipcode/Pictures: Permission denied
+find: /Users/zipcode/Desktop: Operation not permitted
+find: /Users/zipcode/Library: Permission denied
+find: /Users/zipcode/Public/Drop Box: Permission denied
+find: /Users/zipcode/Movies: Permission denied
+find: /Users/zipcode/Documents: Permission denied
+find: /Users/zipcode/Downloads: Permission denied
+find: /Users/sitara/Desktop: Operation not permitted
+find: /Users/sitara/Library/Application Support/CallHistoryTransactions: Operation not permitted
+find: /Users/sitara/Library/Application Support/com.apple.sharedfilelist: Operation not permitted
+find: /Users/sitara/Library/Application Support/com.apple.TCC: Operation not permitted
+find: /Users/sitara/Library/Application Support/FileProvider: Operation not permitted
+find: /Users/sitara/Library/Application Support/CallHistoryDB: Operation not permitted
+find: /Users/sitara/Library/Autosave Information: Operation not permitted
+find: /Users/sitara/Library/IdentityServices: Operation not permitted
+find: /Users/sitara/Library/Messages: Operation not permitted
+find: /Users/sitara/Library/HomeKit: Operation not permitted
+find: /Users/sitara/Library/Sharing: Operation not permitted
+find: /Users/sitara/Library/Mail: Operation not permitted
+find: /Users/sitara/Library/Safari: Operation not permitted
+find: /Users/sitara/Library/Suggestions: Operation not permitted
+find: /Users/sitara/Library/Containers/com.apple.Safari: Operation not permitted
+find: /Users/sitara/Library/Containers/com.apple.iChat: Operation not permitted
+find: /Users/sitara/Library/Containers/com.apple.CloudDocs.MobileDocumentsFileProvider: Operation not permitted
+find: /Users/sitara/Library/Containers/com.apple.mail: Operation not permitted
+find: /Users/sitara/Library/PersonalizationPortrait: Operation not permitted
+find: /Users/sitara/Library/Metadata/CoreSpotlight: Operation not permitted
+find: /Users/sitara/Library/Metadata/com.apple.IntelligentSuggestions: Operation not permitted
+find: /Users/sitara/Library/Cookies: Operation not permitted
+find: /Users/sitara/Library/Caches/CloudKit: Operation not permitted
+find: /Users/sitara/Library/Caches/com.apple.Safari: Operation not permitted
+find: /Users/sitara/Library/Caches/com.apple.ap.adprivacyd: Operation not permitted
+find: /Users/sitara/.Trash: Operation not permitted
+/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/numpy/core
+/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/django/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core/node_modules/got/dist/source/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@snyk/dep-graph/dist/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/got/dist/source/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+/Applications/Postman.app/Contents/Resources/app/node_modules/@sentry/core
+find: /dev/fd/3: Not a directory
+find: /dev/fd/4: Not a directory
+sitara@zipcodes-MacBook-Pro-2 ~ % find / -name core 2> dev/null
+/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+/System/Volumes/Data/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/numpy/core
+/System/Volumes/Data/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/django/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core/node_modules/got/dist/source/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@snyk/dep-graph/dist/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/got/dist/source/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+STD/System/Volumes/Data/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+OUT/System/Volumes/Data/Applications/Postman.app/Contents/Resources/app/node_modules/@sentry/core
+
+/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/numpy/core
+/Applications/PyCharm.app/Contents/plugins/python/helpers/python-skeletons/django/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@yarnpkg/core/node_modules/got/dist/source/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/@snyk/dep-graph/dist/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/got/dist/source/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+/Applications/Postman.app/Contents/Resources/app/node_modules/@sentry/core
+sitara@zipcodes-MacBook-Pro-2 ~ % STDOUT
+zsh: command not found: STDOUT
+sitara@zipcodes-MacBook-Pro-2 ~ % STDOUT >corefiles.log
+zsh: command not found: STDOUT
+sitara@zipcodes-MacBook-Pro-2 ~ % find / -name core 2> /dev/null > corefiles.log 
+
+sitara@zipcodes-MacBook-Pro-2 ~ % 
+sitara@zipcodes-MacBook-Pro-2 ~ % grep -i lib corefiles.log
+/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/usr/local/lib/node_modules/@angular/cli/node_modules/@angular-devkit/core
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/platform/core
+/System/Volumes/Data/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/lib/visualvm/visualvm/core
+/System/Volumes/Data/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core
+/System/Volumes/Data/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+/System/Volumes/Data/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+/Applications/Docker.app/Contents/Resources/snyk/docker/node_modules/axios/lib/core
+/Applications/IntelliJ IDEA.app/Contents/plugins/spy-js/server/node_modules/archiver/lib/modules/core
+sitara@zipcodes-MacBook-Pro-2 ~ % find / -name core 2> /dev/null > corefiles.log| grep -i lib corefiles.log
+sitara@zipcodes-MacBook-Pro-2 ~ % find / -name core 2> /dev/null > corefiles.log| grep -i lib corefiles.log &
+[1] 3681 3682
+sitara@zipcodes-MacBook-Pro-2 ~ % 
+[1]  + broken pipe  find / -name core 2> /dev/null > corefiles.log | 
+       exit 1       grep -i lib corefiles.log
+sitara@zipcodes-MacBook-Pro-2 ~ % / -name core >corefiles.log 2>/dev/null | grep -i lib corefiles.log        
+sitara@zipcodes-MacBook-Pro-2 ~ % / -name core >corefiles.log 2>/dev/null | grep -i lib corefiles.log &
+[1] 4649 4650
+sitara@zipcodes-MacBook-Pro-2 ~ % 
+[1]  + exit 126   / -name core > corefiles.log 2> /dev/null | 
+       exit 1     grep -i lib corefiles.log
+sitara@zipcodes-MacBook-Pro-2 ~ % / -name core >corefiles.log 2>/dev/null | grep -i lib corefiles.log&
+[1] 4657 4658
+sitara@zipcodes-MacBook-Pro-2 ~ % 
+[1]  + exit 126   / -name core > corefiles.log 2> /dev/null | 
+       exit 1     grep -i lib corefiles.log
+sitara@zipcodes-MacBook-Pro-2 ~ % python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+^CTraceback (most recent call last):
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 235, in <module>
+    test()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 231, in test
+    BaseHTTPServer.test(HandlerClass, ServerClass)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/BaseHTTPServer.py", line 610, in test
+    httpd.serve_forever()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 231, in serve_forever
+    poll_interval)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 150, in _eintr_retry
+    return func(*args)
+KeyboardInterrupt
+sitara@zipcodes-MacBook-Pro-2 ~ % python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+^CTraceback (most recent call last):
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 235, in <module>
+    test()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 231, in test
+    BaseHTTPServer.test(HandlerClass, ServerClass)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/BaseHTTPServer.py", line 610, in test
+    httpd.serve_forever()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 231, in serve_forever
+    poll_interval)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 150, in _eintr_retry
+    return func(*args)
+KeyboardInterrupt
+sitara@zipcodes-MacBook-Pro-2 ~ % jobs
+sitara@zipcodes-MacBook-Pro-2 ~ % fg
+fg: no current job
+sitara@zipcodes-MacBook-Pro-2 ~ % bg
+bg: no current job
+sitara@zipcodes-MacBook-Pro-2 ~ % jobs
+sitara@zipcodes-MacBook-Pro-2 ~ % fg
+fg: no current job
+sitara@zipcodes-MacBook-Pro-2 ~ % 
+sitara@zipcodes-MacBook-Pro-2 ~ % python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+^CTraceback (most recent call last):
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 235, in <module>
+    test()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 231, in test
+    BaseHTTPServer.test(HandlerClass, ServerClass)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/BaseHTTPServer.py", line 610, in test
+    httpd.serve_forever()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 231, in serve_forever
+    poll_interval)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 150, in _eintr_retry
+    return func(*args)
+KeyboardInterrupt
+sitara@zipcodes-MacBook-Pro-2 ~ % python -m SimpleHTTPServer
+^Z
+zsh: suspended  python -m SimpleHTTPServer
+sitara@zipcodes-MacBook-Pro-2 ~ % jobs
+[1]  + suspended  python -m SimpleHTTPServer
+sitara@zipcodes-MacBook-Pro-2 ~ % fg
+[1]  + continued  python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+bg
+fg
+^CTraceback (most recent call last):
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 235, in <module>
+    test()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SimpleHTTPServer.py", line 231, in test
+    BaseHTTPServer.test(HandlerClass, ServerClass)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/BaseHTTPServer.py", line 610, in test
+    httpd.serve_forever()
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 231, in serve_forever
+    poll_interval)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/SocketServer.py", line 150, in _eintr_retry
+    return func(*args)
+KeyboardInterrupt
+sitara@zipcodes-MacBook-Pro-2 ~ %   
+
+ls
+open BashTerminalLab
