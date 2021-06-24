@@ -1,0 +1,84 @@
+bobbi@zipcoders-MacBook-Pro ~ % pwd
+/Users/bobbi
+bobbi@zipcoders-MacBook-Pro ~ % ls
+Applications	Dev		Downloads	Movies		Pictures
+Desktop		Documents	Library		Music		Public
+bobbi@zipcoders-MacBook-Pro ~ % cd Dev
+bobbi@zipcoders-MacBook-Pro Dev % git clone https://github.com/Bobbi-Z/CR-MicroLabs-Git-MyFirstFork.git
+Cloning into 'CR-MicroLabs-Git-MyFirstFork'...
+remote: Enumerating objects: 24, done.
+remote: Total 24 (delta 0), reused 0 (delta 0), pack-reused 24
+Receiving objects: 100% (24/24), done.
+Resolving deltas: 100% (5/5), done.
+bobbi@zipcoders-MacBook-Pro Dev % ls
+BlueJ 5.0.1			dreamhouse lab
+CR-MicroLabs-Git-MyFirstFork	first-intellij-project
+Console Lab Level 1		hello-world
+Console Lab Level 1 part 2	lecturedemos
+DayOneDemo			test
+NaiveTicket
+bobbi@zipcoders-MacBook-Pro Dev % cd
+bobbi@zipcoders-MacBook-Pro ~ % cd Dev
+bobbi@zipcoders-MacBook-Pro Dev % cd CR-MicroLabs-Git-MyFirstFork
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % vim
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % echo my-name
+my-name
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % cat my-name
+
+Hello! My name is Bobbi. 				
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % cd ..
+bobbi@zipcoders-MacBook-Pro Dev % git add .
+fatal: not a git repository (or any of the parent directories): .git
+bobbi@zipcoders-MacBook-Pro Dev % ls
+BlueJ 5.0.1			dreamhouse lab
+CR-MicroLabs-Git-MyFirstFork	first-intellij-project
+Console Lab Level 1		hello-world
+Console Lab Level 1 part 2	lecturedemos
+DayOneDemo			test
+NaiveTicket
+bobbi@zipcoders-MacBook-Pro Dev % cd CR-MicroLabs-Git-MyFirstFork
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git status
+On branch master
+Your branch is up to date with 'origin/master'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   my-name
+
+no changes added to commit (use "git add" and/or "git commit -a")
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git add
+Nothing specified, nothing added.
+hint: Maybe you wanted to say 'git add .'?
+hint: Turn this message off by running
+hint: "git config advice.addEmptyPathspec false"
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % get add .
+zsh: command not found: get
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % get add CR-MicroLabs-Git-MyFirstFork
+zsh: command not found: get
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % get add my-name
+zsh: command not found: get
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % ls
+README.md	my-name
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git add my-name
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git commit -m my-name
+[master cd1e9d7] my-name
+ 1 file changed, 1 insertion(+)
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git push origin https://github.com/Bobbi-Z/CR-MicroLabs-Git-MyFirstFork.git
+fatal: invalid refspec 'https://github.com/Bobbi-Z/CR-MicroLabs-Git-MyFirstFork.git'
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git commit -m "added greeting"
+On branch master
+Your branch is ahead of 'origin/master' by 1 commit.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % git push
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (3/3), 316 bytes | 316.00 KiB/s, done.
+Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+To https://github.com/Bobbi-Z/CR-MicroLabs-Git-MyFirstFork.git
+   dd6cea4..cd1e9d7  master -> master
+bobbi@zipcoders-MacBook-Pro CR-MicroLabs-Git-MyFirstFork % 
